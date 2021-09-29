@@ -154,7 +154,7 @@
     if (@available(iOS 14, *)) {
         PHPickerConfiguration *config = [[PHPickerConfiguration alloc] init];
         config.filter = type == IMAGE ? [PHPickerFilter imagesFilter] : type == VIDEO ? [PHPickerFilter videosFilter] : [PHPickerFilter anyFilterMatchingSubfilters:@[[PHPickerFilter videosFilter], [PHPickerFilter imagesFilter]]];
-
+        
         if(type == VIDEO) {
             config.preferredAssetRepresentationMode = PHPickerConfigurationAssetRepresentationModeCurrent;
         }
@@ -416,56 +416,52 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
             }
             
             NSString * filename = url.lastPathComponent;
-            NSString * extention = url.pathExtension;
-            
-            NSURL * cachedUrl;
             
             NSFileManager * fileManager = NSFileManager.defaultManager;
             
             // image is a live photo.
-            if ([extention  isEqual: @"pvt"]) {
-                NSString * nameWithoutExt = [filename substringToIndex:(url.lastPathComponent.length - 4)];
-                NSString * heicFilename = [nameWithoutExt stringByAppendingString: @".HEIC"];
+            if ([url.pathExtension  isEqual: @"pvt"]) {
+                
+                NSArray* filesInBundle = [fileManager  contentsOfDirectoryAtPath:url.path error:NULL];
+                if (filesInBundle == nil) {
+                    Log("%@ Invalid PVT bundle url", self);
+                    return;
+                }
+                
+                NSUInteger heicIdx = [filesInBundle indexOfObjectPassingTest:^BOOL(id obj, NSUInteger _, BOOL * _Nonnull __) {
+                    NSString * name = (NSString *)obj;
+                    return [name.pathExtension isEqual: @"HEIC"];
+                }];
+                
+                if (heicIdx == NSNotFound) {
+                    Log("%@ No HEIC File found in pvt bundle", self);
+                    return;
+                }
+                
+                NSString * heicFilename = filesInBundle[heicIdx];
                 NSString * pathToHeicFile =  [url.path stringByAppendingPathComponent:heicFilename];
                 
-                UIImage * img = [UIImage imageWithContentsOfFile:pathToHeicFile];
-                NSData * data = UIImageJPEGRepresentation(img, 1);
-                
-                NSString * jpegName = [nameWithoutExt stringByAppendingString: @".jpeg"];
-                NSString * cachedFile =  [NSTemporaryDirectory() stringByAppendingPathComponent:jpegName];
-                cachedUrl = [NSURL fileURLWithPath: cachedFile];
-                
-                if([fileManager fileExistsAtPath:cachedFile]) {
-                    [fileManager removeItemAtPath:cachedFile error:NULL];
-                }
-                
-                bool isSuccess = [fileManager createFileAtPath:cachedFile contents:data attributes:nil];
-                if (!isSuccess) {
-                    Log("%@ Error while caching picked Live photo", self);
-                    return;
-                }
-                
+                filename = heicFilename;
+                url = [NSURL fileURLWithPath:pathToHeicFile];
             }
-            else {
-                NSString * cachedFile = [NSTemporaryDirectory() stringByAppendingPathComponent:filename];
-                
-                if([fileManager fileExistsAtPath:cachedFile]) {
-                    [fileManager removeItemAtPath:cachedFile error:NULL];
-                }
-                
-                cachedUrl = [NSURL fileURLWithPath: cachedFile];
-                
-                NSError *copyError;
-                [fileManager copyItemAtURL: url
-                                                      toURL: cachedUrl
-                                                      error: &copyError];
-                
-                if (copyError) {
-                    Log("%@ Error while caching picked file: %@", self, copyError);
-                    return;
-                }
+            
+            NSString * cachedFile = [NSTemporaryDirectory() stringByAppendingPathComponent:filename];
+            NSURL * cachedUrl = [NSURL fileURLWithPath: cachedFile];
+            
+            if([fileManager fileExistsAtPath:cachedFile]) {
+                [fileManager removeItemAtPath:cachedFile error:NULL];
             }
-        
+            
+            NSError *copyError;
+            [fileManager copyItemAtURL: url
+                                 toURL: cachedUrl
+                                 error: &copyError];
+            
+            if (copyError) {
+                Log("%@ Error while caching picked file: %@", self, copyError);
+                return;
+            }
+            
             [urls addObject:cachedUrl];
             dispatch_group_leave(self->_group);
         }];
