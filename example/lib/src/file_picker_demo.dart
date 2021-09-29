@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:io';
 
 class FilePickerDemo extends StatefulWidget {
   @override
@@ -35,11 +36,11 @@ class _FilePickerDemoState extends State<FilePickerDemo> {
         type: _pickingType,
         allowMultiple: _multiPick,
         onFileLoading: (FilePickerStatus status) => print(status),
-        allowedExtensions: (_extension?.isNotEmpty ?? false)
-            ? _extension?.replaceAll(' ', '').split(',')
-            : null,
+        allowedExtensions:
+            (_extension?.isNotEmpty ?? false) ? _extension?.replaceAll(' ', '').split(',') : null,
       ))
           ?.files;
+      print(_paths);
     } on PlatformException catch (e) {
       _logException('Unsupported operation' + e.toString());
     } catch (e) {
@@ -48,8 +49,7 @@ class _FilePickerDemoState extends State<FilePickerDemo> {
     if (!mounted) return;
     setState(() {
       _isLoading = false;
-      _fileName =
-          _paths != null ? _paths!.map((e) => e.name).toString() : '...';
+      _fileName = _paths != null ? _paths!.map((e) => e.name).toString() : '...';
       _userAborted = _paths == null;
     });
   }
@@ -96,9 +96,8 @@ class _FilePickerDemoState extends State<FilePickerDemo> {
     _resetState();
     try {
       String? fileName = await FilePicker.platform.saveFile(
-        allowedExtensions: (_extension?.isNotEmpty ?? false)
-            ? _extension?.replaceAll(' ', '').split(',')
-            : null,
+        allowedExtensions:
+            (_extension?.isNotEmpty ?? false) ? _extension?.replaceAll(' ', '').split(',') : null,
         type: _pickingType,
       );
       setState(() {
@@ -194,8 +193,7 @@ class _FilePickerDemoState extends State<FilePickerDemo> {
                         'Pick multiple files',
                         textAlign: TextAlign.right,
                       ),
-                      onChanged: (bool value) =>
-                          setState(() => _multiPick = value),
+                      onChanged: (bool value) => setState(() => _multiPick = value),
                       value: _multiPick,
                     ),
                   ),
@@ -245,29 +243,20 @@ class _FilePickerDemoState extends State<FilePickerDemo> {
                                   )
                                 : _paths != null
                                     ? Container(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 30.0),
-                                        height:
-                                            MediaQuery.of(context).size.height *
-                                                0.50,
+                                        padding: const EdgeInsets.only(bottom: 30.0),
+                                        height: MediaQuery.of(context).size.height * 0.50,
                                         child: Scrollbar(
                                             child: ListView.separated(
-                                          itemCount: _paths != null &&
-                                                  _paths!.isNotEmpty
+                                          itemCount: _paths != null && _paths!.isNotEmpty
                                               ? _paths!.length
                                               : 1,
-                                          itemBuilder: (BuildContext context,
-                                              int index) {
+                                          itemBuilder: (BuildContext context, int index) {
                                             final bool isMultiPath =
-                                                _paths != null &&
-                                                    _paths!.isNotEmpty;
-                                            final String name =
-                                                'File $index: ' +
-                                                    (isMultiPath
-                                                        ? _paths!
-                                                            .map((e) => e.name)
-                                                            .toList()[index]
-                                                        : _fileName ?? '...');
+                                                _paths != null && _paths!.isNotEmpty;
+                                            final String name = 'File $index: ' +
+                                                (isMultiPath
+                                                    ? _paths!.map((e) => e.name).toList()[index]
+                                                    : _fileName ?? '...');
                                             final path = _paths!
                                                 .map((e) => e.path)
                                                 .toList()[index]
@@ -277,13 +266,12 @@ class _FilePickerDemoState extends State<FilePickerDemo> {
                                               title: Text(
                                                 name,
                                               ),
+                                              leading: Image.file(File(path)),
                                               subtitle: Text(path),
                                             );
                                           },
-                                          separatorBuilder:
-                                              (BuildContext context,
-                                                      int index) =>
-                                                  const Divider(),
+                                          separatorBuilder: (BuildContext context, int index) =>
+                                              const Divider(),
                                         )),
                                       )
                                     : _saveAsFileName != null
