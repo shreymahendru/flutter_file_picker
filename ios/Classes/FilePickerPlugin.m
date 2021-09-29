@@ -417,32 +417,28 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
             
             NSString * filename = url.lastPathComponent;
             
-            NSFileManager * fileManager = NSFileManager.defaultManager;
+            NSFileManager * fileManager = [[NSFileManager alloc] init];
             
             // image is a live photo.
-            if ([url.pathExtension  isEqual: @"pvt"]) {
+            if ([url.pathExtension  isEqualToString: @"pvt"]) {
                 
-                NSArray* filesInBundle = [fileManager  contentsOfDirectoryAtPath:url.path error:NULL];
-                if (filesInBundle == nil) {
-                    Log("%@ Invalid PVT bundle url", self);
-                    return;
-                }
-                
-                NSUInteger heicIdx = [filesInBundle indexOfObjectPassingTest:^BOOL(id obj, NSUInteger _, BOOL * _Nonnull __) {
+                NSArray* filesInBundle = [fileManager contentsOfDirectoryAtURL:url includingPropertiesForKeys:@[] options:NSDirectoryEnumerationSkipsHiddenFiles error:nil];
+    
+                NSUInteger imageIdx = [filesInBundle indexOfObjectPassingTest:^BOOL(id obj, NSUInteger _, BOOL * _Nonnull __) {
                     NSString * name = (NSString *)obj;
-                    return [name.pathExtension isEqual: @"HEIC"];
+                    // type is an image
+                    return UTTypeConformsTo(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, CFBridgingRetain([name pathExtension]), NULL), kUTTypeImage);
                 }];
                 
-                if (heicIdx == NSNotFound) {
-                    Log("%@ No HEIC File found in pvt bundle", self);
+                if (imageIdx == NSNotFound) {
+                    Log("%@ No Image File found in pvt bundle", self);
                     return;
                 }
                 
-                NSString * heicFilename = filesInBundle[heicIdx];
-                NSString * pathToHeicFile =  [url.path stringByAppendingPathComponent:heicFilename];
+                NSURL * pathToImageFile = filesInBundle[imageIdx];
                 
-                filename = heicFilename;
-                url = [NSURL fileURLWithPath:pathToHeicFile];
+                filename = [pathToImageFile lastPathComponent];
+                url = pathToImageFile;
             }
             
             NSString * cachedFile = [NSTemporaryDirectory() stringByAppendingPathComponent:filename];
